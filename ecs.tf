@@ -48,21 +48,36 @@ resource "aws_ecs_task_definition" "couchdb" {
 
   volume {
     name = "couchdb_data"
+
     efs_volume_configuration {
       file_system_id = aws_efs_file_system.couchdb_data.id
-      root_directory = "/bitnami/couchdb"
+      root_directory = "/"
       transit_encryption = "ENABLED"
       transit_encryption_port = 2999
+
+      authorization_config {
+        access_point_id = aws_efs_access_point.couchdb_data.id
+        iam             = "ENABLED"
+      }
     }
   }
 }
 
-# resource "aws_ecs_service" "couchdb" {
-#   name = "couchdb"
-#   cluster = data.aws_ecs_cluster.couchdb_test_cluster.id
+resource "aws_ecs_service" "couchdb" {
+  name = "couchdb"
+  cluster = data.aws_ecs_cluster.couchdb_test_cluster.id
+  launch_type = "FARGATE"
 
-#   task_definition = aws_ecs_task_definition.couchdb.arn
-#   desired_count = 1
-#   # iam_role = aws_iam_role.couchdb.arn
-#   # depends_on = [aws_iam_role_policy.couchdb]
-# }
+  wait_for_steady_state = true
+
+  task_definition = aws_ecs_task_definition.couchdb.arn
+  desired_count = 1
+  # iam_role = aws_iam_role.couchdb.arn
+  # depends_on = [aws_iam_role_policy.couchdb]
+
+  network_configuration {
+    subnets = toset(data.aws_subnets.main_public.ids)
+    security_groups = [aws_security_group.couchdb_service.id]
+    assign_public_ip = true
+  }
+}
