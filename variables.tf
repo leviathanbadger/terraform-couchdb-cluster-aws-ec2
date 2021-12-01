@@ -29,3 +29,8 @@ variable "default_tags" {
     "HostedBy" = "AWS"
   }
 }
+
+variable "vpc_id" {
+  type = string
+  default = "vpc-01eff3f7286dc7a60"
+}
