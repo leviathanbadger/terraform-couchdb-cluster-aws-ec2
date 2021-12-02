@@ -4,13 +4,73 @@ data "aws_ecs_cluster" "couchdb_test_cluster" {
   cluster_name = "couchdb-test-cluster"
 }
 
+resource "aws_iam_role" "couchdb_execution_role" {
+  name = "couchdb-task-execution-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Principal = {
+        Service = "ecs-tasks.amazonaws.com"
+      }
+      Effect = "Allow"
+    }]
+  })
+}
+
+resource "aws_iam_role" "couchdb_task_role" {
+  name = "couchdb-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Principal = {
+        Service = "ecs-tasks.amazonaws.com"
+      }
+      Effect = "Allow"
+    }]
+  })
+}
+
+resource "aws_iam_policy" "couchdb_task_policy" {
+  name        = "couchdb-task-policy"
+  description = "Allows connection from ECS to the EFS storage"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action = [
+          "elasticfilesystem:ClientMount",
+          "elasticfilesystem:ClientWrite"
+        ]
+        Resource = aws_efs_file_system.couchdb_data.arn,
+        Condition = {
+          StringEquals = {
+            "elasticfilesystem:AccessPointArn" = aws_efs_access_point.couchdb_data.arn
+          }
+        }
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "couchdb_task_role_policy" {
+  role = aws_iam_role.couchdb_task_role.name
+  policy_arn = aws_iam_policy.couchdb_task_policy.arn
+}
+
 resource "aws_ecs_task_definition" "couchdb" {
   family = "couchdb"
   requires_compatibilities = ["FARGATE"]
   cpu = 256
   memory = 512
   network_mode = "awsvpc"
-  # TODO: execution role arn
+  execution_role_arn = aws_iam_role.couchdb_execution_role.arn
+  task_role_arn = aws_iam_role.couchdb_task_role.arn
 
   container_definitions = jsonencode([
     {
@@ -61,6 +121,10 @@ resource "aws_ecs_task_definition" "couchdb" {
       }
     }
   }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.couchdb_task_role_policy
+  ]
 }
 
 resource "aws_ecs_service" "couchdb" {
