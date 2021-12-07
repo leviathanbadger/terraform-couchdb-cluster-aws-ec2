@@ -20,17 +20,31 @@ variable "region" {
   default = "us-east-1"
 }
 
-variable "default_tags" {
-  type = map(string)
-  default = {
-    "ManagedBy" = "terraform"
-    "Environment" = "dev"
-    "Project" = "terraform-couchdb-cluster-aws-ec2"
-    "HostedBy" = "AWS"
-  }
+variable "environment" {
+  type = string
+  default = "dev"
 }
 
 variable "vpc_id" {
   type = string
-  default = "vpc-01eff3f7286dc7a60"
+  default = "vpc-79bd5a1e"
+}
+
+variable "couchdb_instance_type" {
+  type = string
+  default = "t2.micro"
+}
+
+variable "couchdb_node_count" {
+  type = number
+  default = 3
+}
+
+variable "default_tags" {
+  type = map(string)
+  default = {
+    "ManagedBy" = "terraform"
+    "Project" = "terraform-couchdb-cluster-aws-ec2"
+    "HostedBy" = "AWS"
+  }
 }
